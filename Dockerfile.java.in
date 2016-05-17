@@ -1,0 +1,5 @@
+FROM zenoss/centos-base:%VERSION%
+MAINTAINER Zenoss <dev@zenoss.com>
+
+RUN yum -y --setopt=tsflags="nodocs" install java-1.7.0-openjdk-headless && /sbin/scrub.sh
+ENV JAVA_HOME /usr/lib/jvm/jre
