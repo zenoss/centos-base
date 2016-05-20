@@ -9,10 +9,10 @@ build: build-base build-java
 build-base:
 	@echo Building base image
 	@if [ -z "$$(docker images zenoss/$(IMAGENAME) | awk '{print $$2}' | grep -e '^$(VERSION)$$')" ]; then  \
-		docker build -q -t foo-$(VERSION) . ; \
-		export CONTAINER=$$(docker run -d foo-$(VERSION) echo); \
+		docker build -t foo-$(VERSION) . || exit 1; \
+		export CONTAINER=$$(docker run -d foo-$(VERSION) echo) || exit 1; \
 		echo Squashing image; \
-		docker export $${CONTAINER} | docker import - $(TAG); \
+		docker export $${CONTAINER} | docker import - $(TAG) || exit 1; \
 	 fi
 
 
