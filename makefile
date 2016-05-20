@@ -1,5 +1,5 @@
 IMAGENAME  = centos-base
-VERSION   ?= 1.0.3-dev1
+VERSION   ?= 1.0.3-dev
 TAG = zenoss/$(IMAGENAME):$(VERSION)
 
 .PHONY: build build-base build-java push clean
