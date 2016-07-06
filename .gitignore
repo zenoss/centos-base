@@ -1,0 +1,10 @@
+*~
+
+Dockerfile.java
+
+# OSX
+.DS_Store
+
+# IntelliJ
+.idea
+*.iml
