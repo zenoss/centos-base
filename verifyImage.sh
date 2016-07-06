@@ -5,11 +5,10 @@ if [ $# -ne 1 ]; then
 	exit 1
 fi
 
-echo "${1}" | grep "[-\_][a-zA-Z]*" >/dev/null
+echo "Pulling $1"
+docker pull $1
 
 if [ $? -eq 0 ]; then
-	echo "VERSION=${1} is NOT ok"
+	echo "ERROR: Docker image $1 already exists"
 	exit 1
-else
-	echo "VERSION=${1} ok"
 fi
