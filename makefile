@@ -35,8 +35,8 @@ verifyVersion:
 
 # Generate a make failure if the image(s) already exist
 verifyImage:
-	@./verifyImage.sh $(TAG)
-	@./verifyImage.sh $(TAG)-java
+	@./verifyImage.sh zenoss/$(IMAGENAME) $(VERSION)
+	@./verifyImage.sh zenoss/$(IMAGENAME) $(VERSION)-java
 
 # Do not release if the image version is invalid
 # This target is intended for use when trying to build/publish images from the master branch
