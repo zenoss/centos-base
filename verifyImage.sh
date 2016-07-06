@@ -11,7 +11,7 @@ fi
 #     are that (A) it lists all tags, and (B) does not require authentication.
 #
 echo "Checking for $1:$2"
-curl --silent https://registry.hub.docker.com/v1/repositories/$1/tags | grep name | grep $2 >/dev/null
+curl --silent https://registry.hub.docker.com/v1/repositories/$1/tags | grep "\"name\": \"${2}\"" >/dev/null
 
 if [ $? -eq 0 ]; then
 	echo "ERROR: Docker image $1:$2 already exists"
