@@ -28,3 +28,11 @@ push:
 # Don't generate an error if the image does not exist
 clean:
 	-docker rmi $(TAG) $(TAG)-java
+
+# Generate a make failure if the VERSION string contains "-<some letters>"
+verifyVersion:
+	@verifyVersion.sh $(VERSION)
+
+# Do not release if the image version is invalid
+# This target is intended for use when trying to build/publish images from the master branch
+release: verifyVersion clean build
