@@ -61,6 +61,6 @@ be the next development version. For example, if you just released version 1.0.3
   * `git checkout master`
   * `git push`
   
-10. Have someone manually kick off the jenkins job to build and publish images.
+10. Have someone manually kick off the jenkins job to build master which will publish the images to Docker hub.
 
 
