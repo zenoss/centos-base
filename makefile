@@ -25,5 +25,6 @@ push:
 	docker push $(TAG)
 	docker push $(TAG)-java
 
+# Don't generate an error if the image does not exist
 clean:
-	docker rmi $(TAG) $(TAG)-java
+	-docker rmi $(TAG) $(TAG)-java
