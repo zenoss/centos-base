@@ -2,6 +2,18 @@
 Centos image with tools installed. Two docker images are created from this project. The first is a Centos7 image with 
 frequently used tools and utilities. The second image is based off the first with the addition of headless OpenJDK7.
 
+# Building
+To buid a dev images for testing locally, use 
+  * `git checkout develop` 
+  * `git pull origin devlop`
+  * `make clean build`
+
+The result should be a `n.n.n-dev` image in your local docker repo (e.g. `1.0.3-dev`).   If you need to make changes, create
+a feature branch like you would for any other kind of change, modify the image deifnition as necessary, use `make clean build` to
+build an image and then test it as necessary.   Once you have finished your local testing, commit your changes, push them,
+and create a pull-request as you would normally. A Jenkins PR build will be started to verify that your changes will build in
+a Jenkins environment.
+
 # Releasing
 Use git flow to release a version to the `master` branch. A jenkins job can be triggered manually to build and publish the
 images to docker hub.  During the git flow release process, update the version in the makefile by removing the `dev`
