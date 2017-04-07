@@ -57,3 +57,6 @@ RUN wget -q https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 -
 
 # Add symlink for vim
 RUN ln -s /usr/bin/vi /usr/bin/vim
+
+# Add TERM=xterm to /root/.bashrc
+RUN echo "export TERM=xterm" >> /root/.bashrc
