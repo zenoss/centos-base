@@ -41,9 +41,15 @@ RUN yum install -y --setopt=tsflags="nodocs" \
         less                                 \
     && /sbin/scrub.sh
 
+# Install the httpie rpm instead of pip installing it
+RUN yum install epel-release -y \
+    && yum install httpie -y \
+    && yum erase epel-release -y \
+    && /sbin/scrub.sh
+
 # Install Python utilities
 RUN wget -qO- https://bootstrap.pypa.io/get-pip.py | python; \
-    pip install --no-cache-dir httpie supervisor \
+    pip install --no-cache-dir supervisor \
     && /sbin/scrub.sh
 
 # Install setuser script
