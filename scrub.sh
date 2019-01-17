@@ -6,9 +6,13 @@ set -e
 localedef --list-archive | grep -v en_US | xargs localedef --delete-from-archive
 mv /usr/lib/locale/locale-archive /usr/lib/locale/locale-archive.tmpl
 /usr/sbin/build-locale-archive
-mv /usr/share/locale/en /usr/share/locale/en_US /usr/share/locale/locale.alias /tmp
+[ -d /usr/share/locale/en ] && mv /usr/share/locale/en /tmp
+[ -d /usr/share/locale/en_US ] && mv /usr/share/locale/en_US /tmp
+[ -f /usr/share/locale/locale.alias ] && mv /usr/share/locale/locale.alias /tmp
 rm -rf /usr/share/locale/*
-mv /tmp/en /tmp/en_US /tmp/locale.alias /usr/share/locale/
+[ -d /tmp/en ] && mv /tmp/en /usr/share/locale
+[ -d /tmp/en_US ] && mv /tmp/en_US /usr/share/locale
+[ -f /tmp/locale.alias ] && mv /tmp/locale.alias /usr/share/locale
 mv /usr/share/i18n/locales/en_US /tmp
 rm -rf /usr/share/i18n/locales/*
 mv /tmp/en_US /usr/share/i18n/locales/
