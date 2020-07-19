@@ -1,33 +1,70 @@
-IMAGENAME  = centos-base
-VERSION   ?= 1.1.8-dev
-TAG = zenoss/$(IMAGENAME):$(VERSION)
+include versions.mk
 
-.PHONY: build build-base build-java push clean
+APPLICATION = centos-base
+PROJECT = zenoss
+TAG = $(VERSION)
+BASEIMAGE = $(PROJECT)/$(APPLICATION):$(TAG)
+JAVAIMAGE = $(BASEIMAGE)-java
 
-build: build-base build-java
+TEMP_NAME = build-$(APPLICATION)-$(VERSION)
 
-build-base:
-	@echo Building base image
-	@if [ -z "$$(docker images zenoss/$(IMAGENAME) | awk '{print $$2}' | grep -e '^$(VERSION)$$')" ]; then  \
-		docker build -t foo-$(VERSION) . || exit 1; \
-		export CONTAINER=$$(docker run -d foo-$(VERSION) echo) || exit 1; \
-		echo Squashing image; \
-		docker export $${CONTAINER} | docker import - $(TAG) || exit 1; \
-	 fi
+BASEIMAGE_EXISTS = $(shell docker image list --format '{{.Tag}}' $(BASEIMAGE))
+JAVAIMAGE_EXISTS = $(shell docker image list --format '{{.Tag}}' $(JAVAIMAGE))
+RPM_PACKAGES = $(shell cat yum_package_list.txt)
 
+.PHONY: build build-base push clean
 
-build-java: build-base
-	@echo Building java image
-	@sed -e 's/%VERSION%/$(VERSION)/g' Dockerfile.java.in > Dockerfile.java
-	@docker build -f Dockerfile.java -t zenoss/$(IMAGENAME):$(VERSION)-java .
+build: build-base
+
+build-base: baseimage/Dockerfile
+ifeq ($(BASEIMAGE_EXISTS),)
+	@echo Building base image...
+	@cp -a scrub.sh baseimage/scrub.sh
+	@cd baseimage; docker build -t $(TEMP_NAME) .
+	@docker container create --name $(TEMP_NAME) $(TEMP_NAME) echo
+	@echo Squashing image...
+	@docker container export $(TEMP_NAME) | docker image import - $(BASEIMAGE)
+	@docker container rm $(TEMP_NAME)
+	@docker image rm $(TEMP_NAME)
+else
+	@echo Base image already built.
+endif
+
+# build-java: build-base javaimage/Dockerfile
+# ifeq ($(JAVAIMAGE_EXISTS),)
+# 	@echo Building java base image...
+# 	@cd javaimage; docker build -t $(TEMP_NAME) .
+# 	@docker container create --name $(TEMP_NAME) $(TEMP_NAME) echo
+# 	@echo Squashing image...
+# 	@docker container export $(TEMP_NAME) | docker image import - $(JAVAIMAGE)
+# 	@docker container rm $(TEMP_NAME)
+# 	@docker image rm $(TEMP_NAME)
+# else
+# 	@echo Java base image already built.
+# endif
+
+baseimage/Dockerfile: | baseimage
+baseimage/Dockerfile: Dockerfile.in
+	@sed -e "s/%PACKAGES%/$(RPM_PACKAGES)/" $< > $@
+
+# javaimage/Dockerfile: | javaimage
+# javaimage/Dockerfile: Dockerfile.java.in
+# 	@sed -e 's/%VERSION%/$(VERSION)/g' $< > $@
+
+baseimage:
+	@mkdir $@
 
 push:
-	docker push $(TAG)
-	docker push $(TAG)-java
+	docker push $(BASEIMAGE)
+#	docker push $(JAVAIMAGE)
 
 # Don't generate an error if the image does not exist
 clean:
-	-docker rmi $(TAG) $(TAG)-java
+ifneq ($(BASEIMAGE_EXISTS),)
+	-docker image rm $(BASEIMAGE)
+	BASEIMAGE_EXISTS=
+endif
+	-rm -rf baseimage
 
 # Generate a make failure if the VERSION string contains "-<some letters>"
 verifyVersion:
@@ -35,8 +72,8 @@ verifyVersion:
 
 # Generate a make failure if the image(s) already exist
 verifyImage:
-	@./verifyImage.sh zenoss/$(IMAGENAME) $(VERSION)
-	@./verifyImage.sh zenoss/$(IMAGENAME) $(VERSION)-java
+	@./verifyImage.sh $(PROJECT)/$(APPLICATION) $(VERSION)
+#	@./verifyImage.sh $(PROJECT)/$(APPLICATION) $(VERSION)-java
 
 # Do not release if the image version is invalid
 # This target is intended for use when trying to build/publish images from the master branch
