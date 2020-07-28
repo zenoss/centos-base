@@ -1,0 +1,26 @@
+#!/bin/bash
+
+stop_container() {
+	docker container stop %CONTAINER_NAME% >/dev/null
+}
+
+cleanup() {
+	stop_container
+
+	docker container rm -f %CONTAINER_NAME% >/dev/null
+}
+trap cleanup EXIT
+
+# docker container create -it --name %CONTAINER_NAME% -v $(pwd)/export:/src %EXPORT_IMAGE% /bin/bash >/dev/null
+# docker container start %CONTAINER_NAME% >/dev/null
+# docker container exec %CONTAINER_NAME% /bin/bash -l -c "find /usr/lib/jvm -maxdepth 1 -mindepth 1 -not -type l -print0 | tar -cf /src/java.tar --null --files-from -"
+# stop_container
+
+docker container run \
+	--name %CONTAINER_NAME% \
+	-v $(pwd)/export:/src \
+	%EXPORT_IMAGE% \
+	/bin/bash -l -c "find /usr/lib/jvm -maxdepth 1 -mindepth 1 -not -type l -print0 | tar -cf /src/%JAVA_TAR% --null --files-from -"
+
+java_path=$(tar tf export/%JAVA_TAR% | head -1)
+docker container export %CONTAINER_NAME% | tar --delete src/ --delete ${java_path} > img/%EXPORT_FILE% 

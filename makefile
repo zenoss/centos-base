@@ -1,80 +1,84 @@
 include versions.mk
 
-APPLICATION = centos-base
-PROJECT = zenoss
-TAG = $(VERSION)
-BASEIMAGE = $(PROJECT)/$(APPLICATION):$(TAG)
-JAVAIMAGE = $(BASEIMAGE)-java
+PROJECT      = zenoss
+REPOSITORY   = centos-base
+TAG          = $(VERSION)
+IMAGE        = $(PROJECT)/$(REPOSITORY):$(TAG)
+DEV_IMAGE    = $(PROJECT)/$(REPOSITORY):$(TAG).devtools
+EXPORT_IMAGE = export-$(REPOSITORY)-$(VERSION)
 
-TEMP_NAME = build-$(APPLICATION)-$(VERSION)
+EXPORT_CONTAINER = build-$(REPOSITORY)-$(VERSION)
+EXPORT_FILE = $(REPOSITORY)_$(VERSION).tar
+JAVA_EXPORT_FILE = java.tar
 
-BASEIMAGE_EXISTS = $(shell docker image list --format '{{.Tag}}' $(BASEIMAGE))
-JAVAIMAGE_EXISTS = $(shell docker image list --format '{{.Tag}}' $(JAVAIMAGE))
-RPM_PACKAGES = $(shell cat yum_package_list.txt)
+IMAGE_EXISTS = $(shell docker image list --format '{{.Tag}}' $(IMAGE))
+DEV_IMAGE_EXISTS = $(shell docker image list --format '{{.Tag}}' $(DEV_IMAGE))
+EXPORT_IMAGE_EXISTS = $(shell docker image list --format '{{.Tag}}' $(EXPORT_IMAGE))
 
-.PHONY: build build-base push clean
+RPM_PACKAGES = $(shell cat packages.txt)
 
-build: build-base
+.PHONY: build
+build: build-image build-dev-image
 
-build-base: baseimage/Dockerfile
-ifeq ($(BASEIMAGE_EXISTS),)
-	@echo Building base image...
-	@cp -a scrub.sh baseimage/scrub.sh
-	@cd baseimage; docker build -t $(TEMP_NAME) .
-	@docker container create --name $(TEMP_NAME) $(TEMP_NAME) echo
-	@echo Squashing image...
-	@docker container export $(TEMP_NAME) | docker image import - $(BASEIMAGE)
-	@docker container rm $(TEMP_NAME)
-	@docker image rm $(TEMP_NAME)
-else
-	@echo Base image already built.
-endif
+.PHONY: build-image
+build-image: img/Dockerfile img/$(EXPORT_FILE)
+	@tar --concatenate --file=img/$(EXPORT_FILE) export/$(JAVA_EXPORT_FILE)
+	@docker build -f img/Dockerfile -t $(IMAGE) img
 
-# build-java: build-base javaimage/Dockerfile
-# ifeq ($(JAVAIMAGE_EXISTS),)
-# 	@echo Building java base image...
-# 	@cd javaimage; docker build -t $(TEMP_NAME) .
-# 	@docker container create --name $(TEMP_NAME) $(TEMP_NAME) echo
-# 	@echo Squashing image...
-# 	@docker container export $(TEMP_NAME) | docker image import - $(JAVAIMAGE)
-# 	@docker container rm $(TEMP_NAME)
-# 	@docker image rm $(TEMP_NAME)
-# else
-# 	@echo Java base image already built.
-# endif
+img/Dockerfile: | img
+img/Dockerfile: Dockerfile.in
+	@sed -e 's/%EXPORT_FILE%/$(EXPORT_FILE)/g' $< > $@
 
-baseimage/Dockerfile: | baseimage
-baseimage/Dockerfile: Dockerfile.in
-	@sed -e "s/%PACKAGES%/$(RPM_PACKAGES)/" $< > $@
+img/$(EXPORT_FILE): | img
+img/$(EXPORT_FILE): export/Dockerfile export.sh export/scrub.sh 
+	@docker build -f export/Dockerfile -t $(EXPORT_IMAGE) export
+	@./export.sh
 
-# javaimage/Dockerfile: | javaimage
-# javaimage/Dockerfile: Dockerfile.java.in
-# 	@sed -e 's/%VERSION%/$(VERSION)/g' $< > $@
+export/Dockerfile: | export
+export/Dockerfile: Dockerfile.export.in
+	@sed -e 's/%RPM_PACKAGES%/$(RPM_PACKAGES)/g' $< > $@
 
-baseimage:
-	@mkdir $@
+export.sh: export.sh.in
+	@sed \
+		-e 's/%EXPORT_FILE%/$(EXPORT_FILE)/g' \
+		-e 's/%CONTAINER_NAME%/$(EXPORT_CONTAINER)/g' \
+		-e 's/%EXPORT_IMAGE%/$(EXPORT_IMAGE)/g' \
+		-e 's/%JAVA_TAR%/$(JAVA_EXPORT_FILE)/g' \
+		$< > $@
+	@chmod +x $@
 
+export/scrub.sh: | export
+export/scrub.sh: scrub.sh
+	@cp $< $@
+
+img export:
+	@mkdir -p $@
+
+.PHONY: push
 push:
-	docker push $(BASEIMAGE)
-#	docker push $(JAVAIMAGE)
+	@docker push $(BASEIMAGE)
+#	@docker push $(JAVAIMAGE)
 
 # Don't generate an error if the image does not exist
+.PHONY: clean
 clean:
-ifneq ($(BASEIMAGE_EXISTS),)
-	-docker image rm $(BASEIMAGE)
-	BASEIMAGE_EXISTS=
-endif
-	-rm -rf baseimage
+	@if [ -n "$(IMAGE_EXISTS)" ]; then docker image rm $(IMAGE); fi
+	@if [ -n "$(DEV_IMAGE_EXISTS)" ]; then docker image rm $(DEV_IMAGE); fi
+	@if [ -n "$(EXPORT_IMAGE_EXISTS)" ]; then docker image rm $(EXPORT_IMAGE); fi
+	@rm -rf img export export.sh
 
 # Generate a make failure if the VERSION string contains "-<some letters>"
+.PHONY: verifyVersion
 verifyVersion:
 	@./verifyVersion.sh $(VERSION)
 
 # Generate a make failure if the image(s) already exist
+.PHONY: verifyImage
 verifyImage:
 	@./verifyImage.sh $(PROJECT)/$(APPLICATION) $(VERSION)
 #	@./verifyImage.sh $(PROJECT)/$(APPLICATION) $(VERSION)-java
 
 # Do not release if the image version is invalid
 # This target is intended for use when trying to build/publish images from the master branch
+.PHONY: release
 release: verifyVersion verifyImage clean build push

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
+set -x
 
 [ -f /usr/share/cracklib/pw_dict.pwd ] && gzip -9 /usr/share/cracklib/pw_dict.pwd
 localedef --list-archive | grep -v en_US | xargs localedef --delete-from-archive
@@ -27,4 +27,3 @@ rm -rf /var/cache/*
 rm -rf /var/tmp/*
 rm -rf /tmp/*
 find /usr/lib/python2.7/site-packages -name '*.pyc' -delete
-

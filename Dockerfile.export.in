@@ -1,0 +1,44 @@
+FROM centos:7
+
+RUN groupadd epmd -r -g 1201 \
+	&& useradd  epmd -r -g epmd -u 1201 -d /tmp -s /sbin/nologin -c "Erlang Port Mapper Daemon" \
+	&& groupadd nagios -r -g 1202 \
+	&& useradd  nagios -r -g nagios -u 1202 -d /var/spool/nagios -s /sbin/nologin \
+	&& groupadd rabbitmq -r -g 1203 \
+	&& useradd  rabbitmq -r -g rabbitmq -u 1203 -d /var/lib/rabbitmq -c "RabbitMQ messaging server" \
+	&& groupadd redis -r -g 1204 \
+	&& useradd  redis -r -g redis -u 1204 -d /var/lib/redis -s /sbin/nologin -c "Redis Database Server" \
+	&& groupadd memcached -r -g 1205 \
+	&& useradd  memcached -r -g memcached -u 1205 -d /run/memcached -s /sbin/nologin -c "Memcached daemon"
+
+RUN yum update -y --setopt=tsflags="nodocs" \
+	&& yum install -y --setopt=tsflags="nodocs" epel-release \
+	&& yum install -y --setopt=tsflags="nodocs" httpie %RPM_PACKAGES% \
+	&& yum erase -y epel-release \
+	&& yum clean all
+
+RUN echo "export JAVA_HOME=/usr/lib/jvm/jre" > /etc/profile.d/java.sh
+RUN echo "export TERM=xterm" >> /root/.bashrc
+RUN echo -e "NODENAME=rabbit@rbt0\nNODE_IP_ADDRESS=0.0.0.0" > /etc/rabbitmq/rabbitmq-env.conf
+
+# Add symlink for vim
+RUN ln -s /usr/bin/vi /usr/bin/vim
+
+RUN wget -q https://raw.githubusercontent.com/phusion/baseimage-docker/master/image/bin/setuser -O /sbin/setuser \
+	&& sed -ie 's/python3/python/' /sbin/setuser \
+	&& chmod a+x /sbin/setuser 
+
+# Install jq to work with JSON
+RUN wget -q https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 -O /usr/bin/jq \
+	&& chmod a+x /usr/bin/jq
+
+# Symlink /etc/localtime
+RUN rm -f /etc/localtime
+RUN ln -s /usr/share/zoneinfo/UTC /etc/localtime
+
+# Creating sym link to remedy library import of serviced
+RUN ln -s /lib64/libdevmapper.so.1.02 /lib64/libdevmapper.so.1.02.1
+
+COPY scrub.sh /sbin/scrub.sh
+RUN chmod +x /sbin/scrub.sh
+RUN /sbin/scrub.sh
