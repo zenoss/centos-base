@@ -48,8 +48,8 @@ RUN yum install epel-release -y \
     && /sbin/scrub.sh
 
 # Install Python utilities
-RUN wget -qO- https://bootstrap.pypa.io/get-pip.py | python; \
-    pip install --no-cache-dir supervisor \
+RUN wget -qO- https://bootstrap.pypa.io/2.7/get-pip.py | python; \
+    pip --no-python-version-warning install --no-cache-dir supervisor \
     && /sbin/scrub.sh
 
 # Install setuser script
