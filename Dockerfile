@@ -48,7 +48,7 @@ RUN yum install epel-release -y \
     && /sbin/scrub.sh
 
 # Install Python utilities
-RUN wget -qO- https://bootstrap.pypa.io/2.7/get-pip.py | python; \
+RUN wget -qO- https://bootstrap.pypa.io/pip/2.7/get-pip.py | python -W ignore::Warning; \
     pip --no-python-version-warning install --no-cache-dir supervisor \
     && /sbin/scrub.sh
 
